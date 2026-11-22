@@ -3,6 +3,7 @@ import {redirect} from 'next/navigation';
 import {getCurrentUser} from '@/lib/auth';
 import {pool} from '@/lib/db';
 import JobAdmin from './job-admin';
+import './admin.css';
 export const dynamic='force-dynamic';
 export default async function AdminJobs(){
  const user=await getCurrentUser();if(!user)redirect('/login');
