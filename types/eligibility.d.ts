@@ -1,0 +1,1 @@
+declare module '@/lib/eligibility.mjs' {export function checkEligibility(profile:any,requirements:any[],asOf?:Date):{eligible:boolean;checks:{type:string;required:boolean;passed:boolean;reason:string}[]};export function mergePeriods(periods:{start:string;end:string}[]):number;}
