@@ -1,0 +1,7 @@
+import { NextResponse } from 'next/server';
+import { z } from 'zod';
+import { getCurrentUser } from '@/lib/auth';
+import { pool } from '@/lib/db';
+const schema=z.object({employer:z.string().trim().min(2).max(200),jobTitle:z.string().trim().min(2).max(200),field:z.string().trim().min(2).max(120),startedOn:z.string().regex(/^\d{4}-\d{2}-\d{2}$/),endedOn:z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().or(z.literal(''))}).refine(v=>!v.endedOn||v.endedOn>=v.startedOn,{message:'تاريخ النهاية قبل البداية'});
+export async function GET(){const user=await getCurrentUser();if(!user)return NextResponse.json({error:'غير مصرح'},{status:401});const r=await pool.query('SELECT id,employer,job_title,field,started_on,ended_on FROM experiences WHERE applicant_id=$1 ORDER BY started_on DESC',[user.id]);return NextResponse.json(r.rows);}
+export async function POST(request:Request){const user=await getCurrentUser();if(!user||user.role!=='applicant')return NextResponse.json({error:'غير مصرح'},{status:403});const p=schema.safeParse(await request.json());if(!p.success)return NextResponse.json({error:'بيانات الخبرة غير صالحة'},{status:400});const v=p.data;const r=await pool.query('INSERT INTO experiences(applicant_id,employer,job_title,field,started_on,ended_on) VALUES($1,$2,$3,$4,$5,$6) RETURNING id',[user.id,v.employer,v.jobTitle,v.field,v.startedOn,v.endedOn||null]);return NextResponse.json(r.rows[0],{status:201});}
