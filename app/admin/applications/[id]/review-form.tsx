@@ -1,0 +1,9 @@
+'use client';
+import {useState} from 'react';
+import {useRouter} from 'next/navigation';
+const next:Record<string,{value:string;label:string}[]>={submitted:[{value:'under_review',label:'بدء المراجعة'}],under_review:[{value:'shortlisted',label:'إدراج في القائمة المختصرة'},{value:'rejected',label:'رفض الطلب'}],shortlisted:[{value:'accepted',label:'قبول الطلب'},{value:'rejected',label:'رفض الطلب'}]};
+export default function ReviewForm({applicationId,initialStatus}:{applicationId:string;initialStatus:string}){
+ const router=useRouter();const [status,setStatus]=useState(initialStatus);const [target,setTarget]=useState(next[initialStatus]?.[0]?.value||'');const [note,setNote]=useState('');const [busy,setBusy]=useState(false);const [message,setMessage]=useState('');
+ async function submit(e:React.FormEvent){e.preventDefault();setBusy(true);setMessage('');try{const r=await fetch('/api/admin/applications/'+applicationId+'/review',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:target,note})});const d=await r.json();if(!r.ok){setMessage(d.error||'تعذر التحديث');return;}setStatus(target);setTarget(next[target]?.[0]?.value||'');setNote('');setMessage('تم تحديث حالة الطلب');router.refresh();}catch{setMessage('تعذر الاتصال بالخادم');}finally{setBusy(false);}}
+ return <section className="card" style={{marginTop:18}}><h3>قرار المراجعة</h3>{next[status]?.length?<form onSubmit={submit}><label>الإجراء</label><select value={target} onChange={e=>setTarget(e.target.value)}>{next[status].map(x=><option key={x.value} value={x.value}>{x.label}</option>)}</select><label>ملاحظة المراجع (إلزامية)</label><textarea className="field" required minLength={3} maxLength={3000} value={note} onChange={e=>setNote(e.target.value)} rows={4}/><button className="btn" disabled={busy}>{busy?'جارٍ الحفظ...':'حفظ القرار'}</button></form>:<p>وصل الطلب إلى حالة نهائية.</p>}{message&&<p role="status">{message}</p>}</section>;
+}
