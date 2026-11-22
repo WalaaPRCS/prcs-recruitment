@@ -1,0 +1,7 @@
+import { NextResponse } from 'next/server';
+import { z } from 'zod';
+import { getCurrentUser } from '@/lib/auth';
+import { pool } from '@/lib/db';
+const schema=z.object({degreeLevel:z.number().int().min(1).max(10),specializationId:z.string().uuid(),institution:z.string().trim().min(2).max(200),graduatedOn:z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().or(z.literal(''))});
+export async function GET(){const user=await getCurrentUser();if(!user)return NextResponse.json({error:'غير مصرح'},{status:401});const r=await pool.query('SELECT e.id,e.degree_level,e.institution,e.graduated_on,e.specialization_id,s.name_ar FROM educations e JOIN specializations s ON s.id=e.specialization_id WHERE e.applicant_id=$1 ORDER BY e.graduated_on DESC NULLS LAST',[user.id]);return NextResponse.json(r.rows);}
+export async function POST(request:Request){const user=await getCurrentUser();if(!user||user.role!=='applicant')return NextResponse.json({error:'غير مصرح'},{status:403});const p=schema.safeParse(await request.json());if(!p.success)return NextResponse.json({error:'بيانات غير صالحة'},{status:400});const v=p.data;try{const r=await pool.query('INSERT INTO educations(applicant_id,degree_level,specialization_id,institution,graduated_on) VALUES($1,$2,$3,$4,$5) RETURNING id',[user.id,v.degreeLevel,v.specializationId,v.institution,v.graduatedOn||null]);return NextResponse.json(r.rows[0],{status:201});}catch{return NextResponse.json({error:'تعذر إضافة المؤهل، تحقق من التخصص'},{status:400});}}
